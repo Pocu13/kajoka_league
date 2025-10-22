@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { TournamentData, Team, Group, Match, Player, MatchSet, BracketMatch } from "@/types/tournament";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 interface TournamentContextType {
   data: TournamentData;
@@ -8,29 +9,28 @@ interface TournamentContextType {
   availableTeams: Team[];
   login: (username: string, password: string) => boolean;
   logout: () => void;
-  addTeam: (name: string, players: Player[]) => void;
-  updateTeam: (id: string, name: string, players: Player[]) => void;
-  deleteTeam: (id: string) => void;
-  addGroup: (name: string, teamIds: string[]) => void;
-  updateGroup: (id: string, name: string, teamIds: string[]) => void;
-  deleteGroup: (id: string) => void;
-  addMatch: (groupId: string, team1Id: string, team2Id: string, date: string, time?: string, giornata?: number) => void;
-  updateMatch: (id: string, sets: MatchSet[], completed: boolean, date?: string, time?: string) => void;
-  deleteMatch: (id: string) => void;
-  updateBracketMatch: (id: string, team1Id: string | null, team2Id: string | null, winnerId: string | null) => void;
-  resetBracket: () => void;
+  addTeam: (name: string, players: Player[]) => Promise<void>;
+  updateTeam: (id: string, name: string, players: Player[]) => Promise<void>;
+  deleteTeam: (id: string) => Promise<void>;
+  addGroup: (name: string, teamIds: string[]) => Promise<void>;
+  updateGroup: (id: string, name: string, teamIds: string[]) => Promise<void>;
+  deleteGroup: (id: string) => Promise<void>;
+  addMatch: (groupId: string, team1Id: string, team2Id: string, date: string, time?: string, giornata?: number) => Promise<void>;
+  updateMatch: (id: string, sets: MatchSet[], completed: boolean, date?: string, time?: string) => Promise<void>;
+  deleteMatch: (id: string) => Promise<void>;
+  updateBracketMatch: (id: string, team1Id: string | null, team2Id: string | null, winnerId: string | null) => Promise<void>;
+  resetBracket: () => Promise<void>;
+  refreshData: () => Promise<void>;
 }
 
 const TournamentContext = createContext<TournamentContextType | undefined>(undefined);
 
-const STORAGE_KEY = "padel-tournament-data";
 const ADMIN_USERNAME = "admin";
 const ADMIN_PASSWORD = "1234";
 
 const initializeBracket = (): BracketMatch[] => {
   const bracket: BracketMatch[] = [];
   
-  // Quarti (8 teams, 4 matches)
   for (let i = 0; i < 4; i++) {
     bracket.push({
       id: `quarter-${i}`,
@@ -42,7 +42,6 @@ const initializeBracket = (): BracketMatch[] => {
     });
   }
   
-  // Semifinali (4 teams, 2 matches)
   for (let i = 0; i < 2; i++) {
     bracket.push({
       id: `semi-${i}`,
@@ -54,7 +53,6 @@ const initializeBracket = (): BracketMatch[] => {
     });
   }
   
-  // Finale (2 teams, 1 match)
   bracket.push({
     id: `final-0`,
     team1Id: null,
@@ -68,33 +66,119 @@ const initializeBracket = (): BracketMatch[] => {
 };
 
 export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [data, setData] = useState<TournamentData>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        // Assicurati che bracket esista
-        if (!parsed.bracket) {
-          parsed.bracket = initializeBracket();
-        }
-        return parsed;
-      } catch {
-        return { teams: [], groups: [], matches: [], bracket: initializeBracket() };
-      }
-    }
-    return { teams: [], groups: [], matches: [], bracket: initializeBracket() };
+  const [data, setData] = useState<TournamentData>({
+    teams: [],
+    groups: [],
+    matches: [],
+    bracket: initializeBracket(),
   });
-
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Calcola i team disponibili (non assegnati a gironi)
   const availableTeams = data.teams.filter(team => {
     return !data.groups.some(group => group.teamIds.includes(team.id));
   });
 
+  // Funzione per caricare tutti i dati da Supabase
+  const refreshData = async () => {
+    try {
+      // Carica Teams con Players
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('*, players(*)');
+      
+      if (teamsError) throw teamsError;
+
+      const teams: Team[] = (teamsData || []).map((team: any) => ({
+        id: team.id,
+        name: team.name,
+        players: (team.players || []).map((player: any) => ({
+          id: player.id,
+          name: player.name,
+        })),
+      }));
+
+      // Carica Groups con team IDs
+      const { data: groupsData, error: groupsError } = await supabase
+        .from('groups')
+        .select('*, group_teams(team_id)');
+      
+      if (groupsError) throw groupsError;
+
+      const groups: Group[] = (groupsData || []).map((group: any) => ({
+        id: group.id,
+        name: group.name,
+        teamIds: (group.group_teams || []).map((gt: any) => gt.team_id),
+      }));
+
+      // Carica Matches
+      const { data: matchesData, error: matchesError } = await supabase
+        .from('matches')
+        .select('*');
+      
+      if (matchesError) throw matchesError;
+
+      const matches: Match[] = (matchesData || []).map((match: any) => ({
+        id: match.id,
+        groupId: match.group_id,
+        team1Id: match.team1_id,
+        team2Id: match.team2_id,
+        date: match.date,
+        time: match.time,
+        giornata: match.giornata,
+        sets: match.sets || [],
+        completed: match.completed,
+      }));
+
+      // Carica Bracket
+      const { data: bracketData, error: bracketError } = await supabase
+        .from('bracket_matches')
+        .select('*')
+        .order('position');
+      
+      if (bracketError) throw bracketError;
+
+      let bracket: BracketMatch[];
+      if (!bracketData || bracketData.length === 0) {
+        // Se non ci sono dati, inizializza il bracket
+        bracket = initializeBracket();
+        // Salva il bracket iniziale nel database
+        const { error: insertError } = await supabase
+          .from('bracket_matches')
+          .insert(bracket.map(match => ({
+            id: match.id,
+            team1_id: match.team1Id,
+            team2_id: match.team2Id,
+            winner_id: match.winnerId,
+            round: match.round,
+            position: match.position,
+          })));
+        if (insertError) console.error('Error initializing bracket:', insertError);
+      } else {
+        bracket = bracketData.map((match: any) => ({
+          id: match.id,
+          team1Id: match.team1_id,
+          team2Id: match.team2_id,
+          winnerId: match.winner_id,
+          round: match.round,
+          position: match.position,
+        }));
+      }
+
+      setData({ teams, groups, matches, bracket });
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({ 
+        title: "❌ Errore di caricamento", 
+        description: "Impossibile caricare i dati dal database",
+        variant: "destructive" 
+      });
+    }
+  };
+
+  // Carica i dati all'avvio
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+    refreshData();
+  }, []);
 
   const login = (username: string, password: string): boolean => {
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
@@ -111,153 +195,322 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     toast({ title: "👋 Logout effettuato" });
   };
 
-  const addTeam = (name: string, players: Player[]) => {
-    const newTeam: Team = {
-      id: crypto.randomUUID(),
-      name,
-      players,
-    };
-    setData(prev => ({ ...prev, teams: [...prev.teams, newTeam] }));
-    toast({ title: "✅ Team aggiunto", description: `${name} è stato creato` });
+  const addTeam = async (name: string, players: Player[]) => {
+    try {
+      // Inserisci il team
+      const { data: newTeam, error: teamError } = await supabase
+        .from('teams')
+        .insert({ name })
+        .select()
+        .single();
+      
+      if (teamError) throw teamError;
+
+      // Inserisci i players
+      if (players.length > 0) {
+        const { error: playersError } = await supabase
+          .from('players')
+          .insert(players.map(player => ({
+            team_id: newTeam.id,
+            name: player.name,
+          })));
+        
+        if (playersError) throw playersError;
+      }
+
+      await refreshData();
+      toast({ title: "✅ Team aggiunto", description: `${name} è stato creato` });
+    } catch (error) {
+      console.error('Error adding team:', error);
+      toast({ title: "❌ Errore", description: "Impossibile aggiungere il team", variant: "destructive" });
+    }
   };
 
-  const updateTeam = (id: string, name: string, players: Player[]) => {
-    setData(prev => ({
-      ...prev,
-      teams: prev.teams.map(t => (t.id === id ? { ...t, name, players } : t)),
-    }));
-    toast({ title: "✅ Team aggiornato", description: `${name} è stato modificato` });
+  const updateTeam = async (id: string, name: string, players: Player[]) => {
+    try {
+      // Aggiorna il team
+      const { error: teamError } = await supabase
+        .from('teams')
+        .update({ name })
+        .eq('id', id);
+      
+      if (teamError) throw teamError;
+
+      // Elimina i vecchi players
+      await supabase.from('players').delete().eq('team_id', id);
+
+      // Inserisci i nuovi players
+      if (players.length > 0) {
+        const { error: playersError } = await supabase
+          .from('players')
+          .insert(players.map(player => ({
+            team_id: id,
+            name: player.name,
+          })));
+        
+        if (playersError) throw playersError;
+      }
+
+      await refreshData();
+      toast({ title: "✅ Team aggiornato", description: `${name} è stato modificato` });
+    } catch (error) {
+      console.error('Error updating team:', error);
+      toast({ title: "❌ Errore", description: "Impossibile aggiornare il team", variant: "destructive" });
+    }
   };
 
-  const deleteTeam = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      teams: prev.teams.filter(t => t.id !== id),
-      groups: prev.groups.map(g => ({ ...g, teamIds: g.teamIds.filter(tid => tid !== id) })),
-      matches: prev.matches.filter(m => m.team1Id !== id && m.team2Id !== id),
-    }));
-    toast({ title: "🗑️ Team eliminato" });
+  const deleteTeam = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('teams')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+
+      await refreshData();
+      toast({ title: "🗑️ Team eliminato" });
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      toast({ title: "❌ Errore", description: "Impossibile eliminare il team", variant: "destructive" });
+    }
   };
 
-  const addGroup = (name: string, teamIds: string[]) => {
-    const newGroup: Group = {
-      id: crypto.randomUUID(),
-      name,
-      teamIds,
-    };
-    setData(prev => ({ ...prev, groups: [...prev.groups, newGroup] }));
-    toast({ title: "✅ Girone aggiunto", description: `${name} è stato creato` });
+  const addGroup = async (name: string, teamIds: string[]) => {
+    try {
+      // Inserisci il gruppo
+      const { data: newGroup, error: groupError } = await supabase
+        .from('groups')
+        .insert({ name })
+        .select()
+        .single();
+      
+      if (groupError) throw groupError;
+
+      // Inserisci le relazioni gruppo-team
+      if (teamIds.length > 0) {
+        const { error: relError } = await supabase
+          .from('group_teams')
+          .insert(teamIds.map(teamId => ({
+            group_id: newGroup.id,
+            team_id: teamId,
+          })));
+        
+        if (relError) throw relError;
+      }
+
+      await refreshData();
+      toast({ title: "✅ Girone aggiunto", description: `${name} è stato creato` });
+    } catch (error) {
+      console.error('Error adding group:', error);
+      toast({ title: "❌ Errore", description: "Impossibile aggiungere il girone", variant: "destructive" });
+    }
   };
 
-  const updateGroup = (id: string, name: string, teamIds: string[]) => {
-    setData(prev => ({
-      ...prev,
-      groups: prev.groups.map(g => (g.id === id ? { ...g, name, teamIds } : g)),
-    }));
-    toast({ title: "✅ Girone aggiornato", description: `${name} è stato modificato` });
+  const updateGroup = async (id: string, name: string, teamIds: string[]) => {
+    try {
+      // Aggiorna il gruppo
+      const { error: groupError } = await supabase
+        .from('groups')
+        .update({ name })
+        .eq('id', id);
+      
+      if (groupError) throw groupError;
+
+      // Elimina le vecchie relazioni
+      await supabase.from('group_teams').delete().eq('group_id', id);
+
+      // Inserisci le nuove relazioni
+      if (teamIds.length > 0) {
+        const { error: relError } = await supabase
+          .from('group_teams')
+          .insert(teamIds.map(teamId => ({
+            group_id: id,
+            team_id: teamId,
+          })));
+        
+        if (relError) throw relError;
+      }
+
+      await refreshData();
+      toast({ title: "✅ Girone aggiornato", description: `${name} è stato modificato` });
+    } catch (error) {
+      console.error('Error updating group:', error);
+      toast({ title: "❌ Errore", description: "Impossibile aggiornare il girone", variant: "destructive" });
+    }
   };
 
-  const deleteGroup = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      groups: prev.groups.filter(g => g.id !== id),
-      matches: prev.matches.filter(m => m.groupId !== id),
-    }));
-    toast({ title: "🗑️ Girone eliminato" });
+  const deleteGroup = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('groups')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+
+      await refreshData();
+      toast({ title: "🗑️ Girone eliminato" });
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      toast({ title: "❌ Errore", description: "Impossibile eliminare il girone", variant: "destructive" });
+    }
   };
 
-  const addMatch = (groupId: string, team1Id: string, team2Id: string, date: string, time?: string, giornata?: number) => {
-    const newMatch: Match = {
-      id: crypto.randomUUID(),
-      groupId,
-      team1Id,
-      team2Id,
-      date,
-      time,
-      giornata,
-      sets: [],
-      completed: false,
-    };
-    setData(prev => ({ ...prev, matches: [...prev.matches, newMatch] }));
-    toast({ title: "✅ Partita aggiunta" });
+  const addMatch = async (
+    groupId: string, 
+    team1Id: string, 
+    team2Id: string, 
+    date: string, 
+    time?: string, 
+    giornata?: number
+  ) => {
+    try {
+      const { error } = await supabase
+        .from('matches')
+        .insert({
+          group_id: groupId,
+          team1_id: team1Id,
+          team2_id: team2Id,
+          date,
+          time,
+          giornata,
+          sets: [],
+          completed: false,
+        });
+      
+      if (error) throw error;
+
+      await refreshData();
+      toast({ title: "✅ Partita aggiunta" });
+    } catch (error) {
+      console.error('Error adding match:', error);
+      toast({ title: "❌ Errore", description: "Impossibile aggiungere la partita", variant: "destructive" });
+    }
   };
 
-  const updateMatch = (id: string, sets: MatchSet[], completed: boolean, date?: string, time?: string) => {
-    setData(prev => ({
-      ...prev,
-      matches: prev.matches.map(m => 
-        m.id === id 
-          ? { 
-              ...m, 
-              sets, 
-              completed,
-              ...(date !== undefined && { date }),
-              ...(time !== undefined && { time })
-            } 
-          : m
-      ),
-    }));
-    toast({ title: "✅ Risultato aggiornato", description: "La classifica è stata aggiornata" });
+  const updateMatch = async (
+    id: string, 
+    sets: MatchSet[], 
+    completed: boolean, 
+    date?: string, 
+    time?: string
+  ) => {
+    try {
+      const updateData: any = { sets, completed };
+      if (date !== undefined) updateData.date = date;
+      if (time !== undefined) updateData.time = time;
+
+      const { error } = await supabase
+        .from('matches')
+        .update(updateData)
+        .eq('id', id);
+      
+      if (error) throw error;
+
+      await refreshData();
+      toast({ title: "✅ Risultato aggiornato", description: "La classifica è stata aggiornata" });
+    } catch (error) {
+      console.error('Error updating match:', error);
+      toast({ title: "❌ Errore", description: "Impossibile aggiornare la partita", variant: "destructive" });
+    }
   };
 
-  const deleteMatch = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      matches: prev.matches.filter(m => m.id !== id),
-    }));
-    toast({ title: "🗑️ Partita eliminata" });
+  const deleteMatch = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('matches')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+
+      await refreshData();
+      toast({ title: "🗑️ Partita eliminata" });
+    } catch (error) {
+      console.error('Error deleting match:', error);
+      toast({ title: "❌ Errore", description: "Impossibile eliminare la partita", variant: "destructive" });
+    }
   };
 
-  const updateBracketMatch = (id: string, team1Id: string | null, team2Id: string | null, winnerId: string | null) => {
-    setData(prev => {
-      const newBracket = prev.bracket.map(match => {
-        if (match.id === id) {
-          return { ...match, team1Id, team2Id, winnerId };
-        }
-        return match;
-      });
+  const updateBracketMatch = async (
+    id: string, 
+    team1Id: string | null, 
+    team2Id: string | null, 
+    winnerId: string | null
+  ) => {
+    try {
+      // Aggiorna il match corrente
+      const { error: updateError } = await supabase
+        .from('bracket_matches')
+        .update({
+          team1_id: team1Id,
+          team2_id: team2Id,
+          winner_id: winnerId,
+        })
+        .eq('id', id);
+      
+      if (updateError) throw updateError;
 
-      // Se c'è un vincitore, propagalo al turno successivo
+      // Se c'è un vincitore, propaga al turno successivo
       if (winnerId) {
-        const currentMatch = newBracket.find(m => m.id === id);
+        const currentMatch = data.bracket.find(m => m.id === id);
         if (currentMatch) {
           if (currentMatch.round === "quarter") {
-            // Trova la semifinale corrispondente
             const semiIndex = Math.floor(currentMatch.position / 2);
-            const semiMatch = newBracket.find(m => m.round === "semi" && m.position === semiIndex);
-            if (semiMatch) {
-              // Se è la prima partita del quarto, aggiorna team1, altrimenti team2
-              if (currentMatch.position % 2 === 0) {
-                semiMatch.team1Id = winnerId;
-              } else {
-                semiMatch.team2Id = winnerId;
-              }
-            }
+            const semiId = `semi-${semiIndex}`;
+            const field = currentMatch.position % 2 === 0 ? 'team1_id' : 'team2_id';
+            
+            await supabase
+              .from('bracket_matches')
+              .update({ [field]: winnerId })
+              .eq('id', semiId);
+              
           } else if (currentMatch.round === "semi") {
-            // Trova la finale
-            const finalMatch = newBracket.find(m => m.round === "final");
-            if (finalMatch) {
-              if (currentMatch.position === 0) {
-                finalMatch.team1Id = winnerId;
-              } else {
-                finalMatch.team2Id = winnerId;
-              }
-            }
+            const field = currentMatch.position === 0 ? 'team1_id' : 'team2_id';
+            
+            await supabase
+              .from('bracket_matches')
+              .update({ [field]: winnerId })
+              .eq('id', 'final-0');
           }
         }
       }
 
-      return { ...prev, bracket: newBracket };
-    });
-    toast({ title: "✅ Tabellone aggiornato" });
+      await refreshData();
+      toast({ title: "✅ Tabellone aggiornato" });
+    } catch (error) {
+      console.error('Error updating bracket match:', error);
+      toast({ title: "❌ Errore", description: "Impossibile aggiornare il tabellone", variant: "destructive" });
+    }
   };
 
-  const resetBracket = () => {
-    setData(prev => ({
-      ...prev,
-      bracket: initializeBracket(),
-    }));
-    toast({ title: "🔄 Tabellone resettato" });
+  const resetBracket = async () => {
+    try {
+      // Elimina tutti i bracket matches esistenti
+      await supabase.from('bracket_matches').delete().neq('id', '');
+
+      // Reinserisce il bracket vuoto
+      const newBracket = initializeBracket();
+      const { error } = await supabase
+        .from('bracket_matches')
+        .insert(newBracket.map(match => ({
+          id: match.id,
+          team1_id: match.team1Id,
+          team2_id: match.team2Id,
+          winner_id: match.winnerId,
+          round: match.round,
+          position: match.position,
+        })));
+      
+      if (error) throw error;
+
+      await refreshData();
+      toast({ title: "🔄 Tabellone resettato" });
+    } catch (error) {
+      console.error('Error resetting bracket:', error);
+      toast({ title: "❌ Errore", description: "Impossibile resettare il tabellone", variant: "destructive" });
+    }
   };
 
   return (
@@ -279,6 +532,7 @@ export const TournamentProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         deleteMatch,
         updateBracketMatch,
         resetBracket,
+        refreshData,
       }}
     >
       {children}
