@@ -85,7 +85,8 @@ export const validateSetScore = (score1: number, score2: number): boolean => {
   if (maxScore < 6 || maxScore > 7) return false;
   if (minScore < 0 || minScore > 6) return false;
   if (maxScore === 6 && minScore === 6) return false; // Must be 7-6 not 6-6
-  if (maxScore === 7 && minScore !== 6) return false; // 7 only valid with 6
+  if (maxScore === 6 && minScore === 5) return false; // Must be 7-5 not 6-5
+  if (maxScore === 7 && minScore < 5) return false; // 7 only valid with 5 or 6
   
   return true;
 };
