@@ -69,6 +69,27 @@ const Calendar = () => {
     };
   }).filter(g => g.giornate.length > 0);
 
+  // On mobile, when searching, group all results in a single card
+  const isSearchActive = searchQuery.trim().length > 0;
+  const allFilteredMatches = isSearchActive 
+    ? data.matches.filter(m => m.giornata).filter(match => {
+        const team1 = data.teams.find(t => t.id === match.team1Id);
+        const team2 = data.teams.find(t => t.id === match.team2Id);
+        const group = data.groups.find(g => g.id === match.groupId);
+        
+        const team1Name = team1?.name.toLowerCase() || "";
+        const team2Name = team2?.name.toLowerCase() || "";
+        const groupName = group?.name.toLowerCase() || "";
+        const matchDate = match.date ? new Date(match.date).toLocaleDateString("it-IT") : "";
+        const query = searchQuery.toLowerCase();
+        
+        return team1Name.includes(query) || 
+               team2Name.includes(query) || 
+               groupName.includes(query) || 
+               matchDate.includes(query);
+      })
+    : [];
+
   return (
     <div className="container mx-auto py-8 px-4 space-y-8 animate-fade-in">
       <div>
@@ -83,7 +104,8 @@ const Calendar = () => {
       {/* Giornate Section */}
       {giornateView.length > 0 && (
         <div className="space-y-6">
-          <div className="flex items-start justify-between gap-4">
+          {/* Desktop layout */}
+          <div className="hidden md:flex items-start justify-between gap-4">
             <div className="flex-1">
               <h2 className="text-2xl font-bold mb-1">Giornate</h2>
               <p className="text-sm text-muted-foreground">
@@ -126,78 +148,191 @@ const Calendar = () => {
               </Button>
             </div>
           </div>
+
+          {/* Mobile layout */}
+          <div className="md:hidden space-y-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Giornate</h2>
+              <p className="text-sm text-muted-foreground">
+                Tutte le partite organizzate per giornata
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isSearchOpen && (
+                <div className="relative animate-fade-in flex-1">
+                  <Input
+                    type="text"
+                    placeholder="Cerca team, girone o data..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pr-8 transition-all"
+                    autoFocus
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  setIsSearchOpen(!isSearchOpen);
+                  if (isSearchOpen) {
+                    setSearchQuery("");
+                  }
+                }}
+                className="hover-scale shrink-0"
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
           
           <div className="space-y-6">
-            {giornateView.map(({ group, giornate }) => (
-              <Card key={group.id} className="shadow-card overflow-hidden">
-                <CardHeader className="bg-gradient-primary text-primary-foreground">
-                  <CardTitle>{group.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="space-y-6">
-                    {giornate.map(([giornataNum, matches]) => (
-                      <div key={giornataNum}>
-                        <div className="flex items-center gap-3 mb-4">
-                          <Badge variant="default" className="text-base px-4 py-1">
-                            Giornata {giornataNum}
-                          </Badge>
-                          <Separator className="flex-1" />
-                        </div>
+            {/* Mobile: Single card with all search results */}
+            {isSearchActive && allFilteredMatches.length > 0 && (
+              <div className="md:hidden">
+                <Card className="shadow-card overflow-hidden">
+                  <CardHeader className="bg-gradient-primary text-primary-foreground">
+                    <CardTitle>Risultati ricerca</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="grid gap-3">
+                      {allFilteredMatches.map((match) => {
+                        const team1 = data.teams.find(t => t.id === match.team1Id);
+                        const team2 = data.teams.find(t => t.id === match.team2Id);
+                        const group = data.groups.find(g => g.id === match.groupId);
                         
-                        <div className="grid md:grid-cols-2 gap-3">
-                          {matches.map((match) => {
-                            const team1 = data.teams.find(t => t.id === match.team1Id);
-                            const team2 = data.teams.find(t => t.id === match.team2Id);
-                            
-                            return (
-                              <div
-                                key={match.id}
-                                className="p-4 bg-muted/30 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
-                              >
-                                <div className="flex items-start justify-between mb-2">
-                                  <div className="flex-1">
-                                    <p className="font-semibold text-sm mb-1">
-                                      {team1?.name} vs {team2?.name}
-                                    </p>
-                                    {match.date && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {new Date(match.date).toLocaleDateString("it-IT")}
-                                        {match.time && ` - ${match.time}`}
-                                      </p>
-                                    )}
-                                    {!match.date && (
-                                      <p className="text-xs text-muted-foreground italic">
-                                        Data da definire
-                                      </p>
-                                    )}
-                                  </div>
-                                  <Badge 
-                                    variant={match.completed ? "default" : "secondary"}
-                                    className="text-xs"
-                                  >
-                                    {match.completed ? "Giocata" : "Programmata"}
-                                  </Badge>
-                                </div>
-                                
-                                {match.sets.length > 0 && (
-                                  <div className="flex gap-1 mt-2">
-                                    {match.sets.map((set, i) => (
-                                      <Badge key={i} variant="outline" className="text-xs">
-                                        {set.team1Score}-{set.team2Score}
-                                      </Badge>
-                                    ))}
-                                  </div>
+                        return (
+                          <div
+                            key={match.id}
+                            className="p-4 bg-muted/30 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  {group?.name} - Giornata {match.giornata}
+                                </p>
+                                <p className="font-semibold text-sm mb-1">
+                                  {team1?.name} vs {team2?.name}
+                                </p>
+                                {match.date && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(match.date).toLocaleDateString("it-IT")}
+                                    {match.time && ` - ${match.time}`}
+                                  </p>
+                                )}
+                                {!match.date && (
+                                  <p className="text-xs text-muted-foreground italic">
+                                    Data da definire
+                                  </p>
                                 )}
                               </div>
-                            );
-                          })}
+                              <Badge 
+                                variant={match.completed ? "default" : "secondary"}
+                                className="text-xs"
+                              >
+                                {match.completed ? "Giocata" : "Programmata"}
+                              </Badge>
+                            </div>
+                            
+                            {match.sets.length > 0 && (
+                              <div className="flex gap-1 mt-2">
+                                {match.sets.map((set, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs">
+                                    {set.team1Score}-{set.team2Score}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Desktop: Original grouped layout, or Mobile when not searching */}
+            <div className={isSearchActive ? "hidden md:block" : ""}>
+              {giornateView.map(({ group, giornate }) => (
+                <Card key={group.id} className="shadow-card overflow-hidden">
+                  <CardHeader className="bg-gradient-primary text-primary-foreground">
+                    <CardTitle>{group.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="space-y-6">
+                      {giornate.map(([giornataNum, matches]) => (
+                        <div key={giornataNum}>
+                          <div className="flex items-center gap-3 mb-4">
+                            <Badge variant="default" className="text-base px-4 py-1">
+                              Giornata {giornataNum}
+                            </Badge>
+                            <Separator className="flex-1" />
+                          </div>
+                          
+                          <div className="grid md:grid-cols-2 gap-3">
+                            {matches.map((match) => {
+                              const team1 = data.teams.find(t => t.id === match.team1Id);
+                              const team2 = data.teams.find(t => t.id === match.team2Id);
+                              
+                              return (
+                                <div
+                                  key={match.id}
+                                  className="p-4 bg-muted/30 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
+                                >
+                                  <div className="flex items-start justify-between mb-2">
+                                    <div className="flex-1">
+                                      <p className="font-semibold text-sm mb-1">
+                                        {team1?.name} vs {team2?.name}
+                                      </p>
+                                      {match.date && (
+                                        <p className="text-xs text-muted-foreground">
+                                          {new Date(match.date).toLocaleDateString("it-IT")}
+                                          {match.time && ` - ${match.time}`}
+                                        </p>
+                                      )}
+                                      {!match.date && (
+                                        <p className="text-xs text-muted-foreground italic">
+                                          Data da definire
+                                        </p>
+                                      )}
+                                    </div>
+                                    <Badge 
+                                      variant={match.completed ? "default" : "secondary"}
+                                      className="text-xs"
+                                    >
+                                      {match.completed ? "Giocata" : "Programmata"}
+                                    </Badge>
+                                  </div>
+                                  
+                                  {match.sets.length > 0 && (
+                                    <div className="flex gap-1 mt-2">
+                                      {match.sets.map((set, i) => (
+                                        <Badge key={i} variant="outline" className="text-xs">
+                                          {set.team1Score}-{set.team2Score}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
           
           <Separator className="my-8" />
