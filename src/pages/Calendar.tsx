@@ -3,7 +3,8 @@ import { useTournament } from "@/contexts/TournamentContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { format, isSameDay, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { it } from "date-fns/locale";
 import { Separator } from "@/components/ui/separator";
@@ -14,6 +15,8 @@ const Calendar = () => {
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
@@ -21,12 +24,38 @@ const Calendar = () => {
     match.date && isSameDay(new Date(match.date), selectedDate)
   );
 
+  // Filter matches based on search query
+  const filterMatches = (matches: typeof data.matches) => {
+    if (!searchQuery.trim()) return matches;
+    
+    const query = searchQuery.toLowerCase();
+    const filtered = matches.filter(match => {
+      const team1 = data.teams.find(t => t.id === match.team1Id);
+      const team2 = data.teams.find(t => t.id === match.team2Id);
+      const group = data.groups.find(g => g.id === match.groupId);
+      
+      const team1Name = team1?.name.toLowerCase() || "";
+      const team2Name = team2?.name.toLowerCase() || "";
+      const groupName = group?.name.toLowerCase() || "";
+      const matchDate = match.date ? new Date(match.date).toLocaleDateString("it-IT") : "";
+      
+      return team1Name.includes(query) || 
+             team2Name.includes(query) || 
+             groupName.includes(query) || 
+             matchDate.includes(query);
+    });
+    
+    // If no results found, return original matches to keep display unchanged
+    return filtered.length > 0 ? filtered : matches;
+  };
+
   // Group matches by giornate for all groups
   const giornateView = data.groups.map(group => {
     const groupMatches = data.matches.filter(m => m.groupId === group.id && m.giornata);
+    const filteredMatches = filterMatches(groupMatches);
     
-    const giornate = new Map<number, typeof groupMatches>();
-    groupMatches.forEach(match => {
+    const giornate = new Map<number, typeof filteredMatches>();
+    filteredMatches.forEach(match => {
       const giornata = match.giornata!;
       if (!giornate.has(giornata)) {
         giornate.set(giornata, []);
@@ -54,11 +83,48 @@ const Calendar = () => {
       {/* Giornate Section */}
       {giornateView.length > 0 && (
         <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold mb-1">Giornate</h2>
-            <p className="text-sm text-muted-foreground">
-              Tutte le partite organizzate per giornata
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold mb-1">Giornate</h2>
+              <p className="text-sm text-muted-foreground">
+                Tutte le partite organizzate per giornata
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isSearchOpen && (
+                <div className="relative animate-fade-in">
+                  <Input
+                    type="text"
+                    placeholder="Cerca team, girone o data..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-64 pr-8 transition-all"
+                    autoFocus
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  setIsSearchOpen(!isSearchOpen);
+                  if (isSearchOpen) {
+                    setSearchQuery("");
+                  }
+                }}
+                className="hover-scale"
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           
           <div className="space-y-6">
