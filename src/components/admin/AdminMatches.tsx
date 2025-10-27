@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
+import { it } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -469,7 +470,7 @@ export const AdminMatches = () => {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {editDate ? format(editDate, "PPP", { locale: undefined }) : "Seleziona data"}
+                      {editDate ? format(editDate, "dd/MM/yyyy", { locale: it }) : "Seleziona data"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -479,6 +480,8 @@ export const AdminMatches = () => {
                       onSelect={setEditDate}
                       initialFocus
                       className="pointer-events-auto"
+                      locale={it}
+                      weekStartsOn={1}
                     />
                   </PopoverContent>
                 </Popover>
