@@ -83,12 +83,22 @@ export const AdminMatches = () => {
     }
     setSets(newSets);
   };
+  
+  // Generate score options based on set index (3rd set is super tiebreak)
+  const getScoreOptions = (setIndex: number) => {
+    if (setIndex === 2) {
+      // 3rd set: super tiebreak (0-22)
+      return Array.from({ length: 23 }, (_, i) => i);
+    }
+    // 1st and 2nd set: normal set (0-7)
+    return [0, 1, 2, 3, 4, 5, 6, 7];
+  };
 
   const handleSaveResult = () => {
     if (!editingMatchId) return;
 
-    const validSets = sets.filter(s => 
-      s.team1Score >= 0 && s.team2Score >= 0 && validateSetScore(s.team1Score, s.team2Score)
+    const validSets = sets.filter((s, idx) => 
+      s.team1Score >= 0 && s.team2Score >= 0 && validateSetScore(s.team1Score, s.team2Score, idx)
     );
 
     const completed = validSets.length > 0 && isMatchComplete(validSets);
@@ -226,10 +236,10 @@ export const AdminMatches = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="shadow-primary">
+            <Button className="shadow-primary w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Aggiungi Partita
             </Button>
@@ -312,7 +322,7 @@ export const AdminMatches = () => {
 
         <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="shadow-primary">
+            <Button variant="outline" className="shadow-primary w-full sm:w-auto">
               <Sparkles className="w-4 h-4 mr-2" />
               Genera Partite
             </Button>
@@ -371,57 +381,61 @@ export const AdminMatches = () => {
               <Label className="text-base font-semibold">Set Giocati</Label>
               <div className="space-y-3">
                 {sets.map((set, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <span className="text-sm font-medium min-w-[60px]">Set {idx + 1}:</span>
-                    <Select 
-                      value={set.team1Score < 0 ? "-1" : set.team1Score.toString()} 
-                      onValueChange={(value) => handleSetChange(idx, 1, value)}
-                    >
-                      <SelectTrigger className="w-20 font-semibold">
-                        <SelectValue>
-                          {set.team1Score < 0 ? "-" : set.team1Score}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="-1" className="font-medium text-muted-foreground">
-                          -
-                        </SelectItem>
-                        {[0, 1, 2, 3, 4, 5, 6, 7].map((score) => (
-                          <SelectItem 
-                            key={score} 
-                            value={score.toString()}
-                            className="font-medium"
-                          >
-                            {score}
+                  <div key={idx} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 p-3 bg-muted/50 rounded-lg">
+                    <span className="text-sm font-medium min-w-[80px]">
+                      {idx === 2 ? "Set 3 (Super TB):" : `Set ${idx + 1}:`}
+                    </span>
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 w-full sm:w-auto">
+                      <Select 
+                        value={set.team1Score < 0 ? "-1" : set.team1Score.toString()} 
+                        onValueChange={(value) => handleSetChange(idx, 1, value)}
+                      >
+                        <SelectTrigger className="w-20 font-semibold">
+                          <SelectValue>
+                            {set.team1Score < 0 ? "-" : set.team1Score}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[200px]">
+                          <SelectItem value="-1" className="font-medium text-muted-foreground">
+                            -
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <span className="text-lg font-bold">-</span>
-                    <Select 
-                      value={set.team2Score < 0 ? "-1" : set.team2Score.toString()} 
-                      onValueChange={(value) => handleSetChange(idx, 2, value)}
-                    >
-                      <SelectTrigger className="w-20 font-semibold">
-                        <SelectValue>
-                          {set.team2Score < 0 ? "-" : set.team2Score}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="-1" className="font-medium text-muted-foreground">
-                          -
-                        </SelectItem>
-                        {[0, 1, 2, 3, 4, 5, 6, 7].map((score) => (
-                          <SelectItem 
-                            key={score} 
-                            value={score.toString()}
-                            className="font-medium"
-                          >
-                            {score}
+                          {getScoreOptions(idx).map((score) => (
+                            <SelectItem 
+                              key={score} 
+                              value={score.toString()}
+                              className="font-medium"
+                            >
+                              {score}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-lg font-bold">-</span>
+                      <Select 
+                        value={set.team2Score < 0 ? "-1" : set.team2Score.toString()} 
+                        onValueChange={(value) => handleSetChange(idx, 2, value)}
+                      >
+                        <SelectTrigger className="w-20 font-semibold">
+                          <SelectValue>
+                            {set.team2Score < 0 ? "-" : set.team2Score}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[200px]">
+                          <SelectItem value="-1" className="font-medium text-muted-foreground">
+                            -
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          {getScoreOptions(idx).map((score) => (
+                            <SelectItem 
+                              key={score} 
+                              value={score.toString()}
+                              className="font-medium"
+                            >
+                              {score}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 ))}
               </div>
