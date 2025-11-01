@@ -66,29 +66,29 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8">
+    <div className="min-h-screen bg-background py-4 sm:py-8">
       <div className="container mx-auto px-4">
-        <div className="mb-8 flex items-center justify-between animate-fade-in">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in">
           <div>
-            <h1 className="text-4xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
               Admin Panel
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Gestisci teams, gironi e partite
             </p>
           </div>
-          <Button onClick={logout} variant="outline">
+          <Button onClick={logout} variant="outline" className="w-full sm:w-auto">
             <LogOut className="w-4 h-4 mr-2" />
             Logout
           </Button>
         </div>
 
         <Tabs defaultValue="teams" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="teams">Teams</TabsTrigger>
-            <TabsTrigger value="groups">Gironi</TabsTrigger>
-            <TabsTrigger value="matches">Partite</TabsTrigger>
-            <TabsTrigger value="brackets">Tabelloni</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 h-auto">
+            <TabsTrigger value="teams" className="text-xs sm:text-sm px-2 py-2">Teams</TabsTrigger>
+            <TabsTrigger value="groups" className="text-xs sm:text-sm px-2 py-2">Gironi</TabsTrigger>
+            <TabsTrigger value="matches" className="text-xs sm:text-sm px-2 py-2">Partite</TabsTrigger>
+            <TabsTrigger value="brackets" className="text-xs sm:text-sm px-2 py-2">Tabelloni</TabsTrigger>
           </TabsList>
 
           <TabsContent value="teams" className="animate-fade-in">
