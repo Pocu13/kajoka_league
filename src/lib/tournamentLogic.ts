@@ -41,16 +41,30 @@ export const calculateStandings = (
       
       const team1Won = team1Sets > team2Sets;
       
+      // Determine points based on match result
+      // 2-0 win: 3 points to winner, 0 to loser
+      // 2-1 win: 2 points to winner, 1 to loser
+      let team1Points = 0;
+      let team2Points = 0;
+      
+      if (team1Won) {
+        team1Points = team1Sets === 2 && team2Sets === 0 ? 3 : 2;
+        team2Points = team1Sets === 2 && team2Sets === 1 ? 1 : 0;
+      } else {
+        team2Points = team2Sets === 2 && team1Sets === 0 ? 3 : 2;
+        team1Points = team2Sets === 2 && team1Sets === 1 ? 1 : 0;
+      }
+      
       // Update team 1
       standings[match.team1Id].played++;
       standings[match.team1Id].setsWon += team1Sets;
       standings[match.team1Id].setsLost += team2Sets;
       standings[match.team1Id].setDifference = 
         standings[match.team1Id].setsWon - standings[match.team1Id].setsLost;
+      standings[match.team1Id].points += team1Points;
       
       if (team1Won) {
         standings[match.team1Id].wins++;
-        standings[match.team1Id].points += 3;
       } else {
         standings[match.team1Id].losses++;
       }
@@ -61,10 +75,10 @@ export const calculateStandings = (
       standings[match.team2Id].setsLost += team1Sets;
       standings[match.team2Id].setDifference = 
         standings[match.team2Id].setsWon - standings[match.team2Id].setsLost;
+      standings[match.team2Id].points += team2Points;
       
       if (!team1Won) {
         standings[match.team2Id].wins++;
-        standings[match.team2Id].points += 3;
       } else {
         standings[match.team2Id].losses++;
       }
@@ -77,11 +91,21 @@ export const calculateStandings = (
   });
 };
 
-export const validateSetScore = (score1: number, score2: number): boolean => {
-  // Valid set scores: winner must have 6-7 points, loser must have 0-6 points
+export const validateSetScore = (score1: number, score2: number, setIndex: number = 0): boolean => {
   const maxScore = Math.max(score1, score2);
   const minScore = Math.min(score1, score2);
   
+  // 3rd set is a super tiebreak (10 points with 2 point difference, max 22-20)
+  if (setIndex === 2) {
+    if (maxScore < 10) return false;
+    if (maxScore > 22) return false;
+    if (minScore < 0 || minScore > 20) return false;
+    if (maxScore - minScore < 2) return false; // Must have 2 point difference
+    if (maxScore === 22 && minScore !== 20) return false; // Max score is 22-20
+    return true;
+  }
+  
+  // First and second sets: normal padel rules (6-7 points)
   if (maxScore < 6 || maxScore > 7) return false;
   if (minScore < 0 || minScore > 6) return false;
   if (maxScore === 6 && minScore === 6) return false; // Must be 7-6 not 6-6
@@ -97,8 +121,9 @@ export const isMatchComplete = (sets: MatchSet[]): boolean => {
   let team1Sets = 0;
   let team2Sets = 0;
   
-  for (const set of sets) {
-    if (!validateSetScore(set.team1Score, set.team2Score)) return false;
+  for (let i = 0; i < sets.length; i++) {
+    const set = sets[i];
+    if (!validateSetScore(set.team1Score, set.team2Score, i)) return false;
     if (set.team1Score > set.team2Score) team1Sets++;
     else team2Sets++;
   }
