@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, Save, Sparkles } from "lucide-react";
+import { Trash2, Plus, Save, Sparkles, Search, X } from "lucide-react";
 import { MatchSet } from "@/types/tournament";
 import { validateSetScore, isMatchComplete } from "@/lib/tournamentLogic";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,8 @@ export const AdminMatches = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
   const [selectedGroupForGeneration, setSelectedGroupForGeneration] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,13 +216,60 @@ export const AdminMatches = () => {
       })
     : [];
 
+  // Filter matches based on search query
+  const filterMatches = (matches: typeof data.matches) => {
+    if (!searchQuery.trim()) return matches;
+    
+    const query = searchQuery.toLowerCase();
+    const filtered = matches.filter(match => {
+      const team1 = data.teams.find(t => t.id === match.team1Id);
+      const team2 = data.teams.find(t => t.id === match.team2Id);
+      const group = data.groups.find(g => g.id === match.groupId);
+      
+      const team1Name = team1?.name.toLowerCase() || "";
+      const team2Name = team2?.name.toLowerCase() || "";
+      const groupName = group?.name.toLowerCase() || "";
+      const matchDate = match.date ? new Date(match.date).toLocaleDateString("it-IT") : "";
+      
+      return team1Name.includes(query) || 
+             team2Name.includes(query) || 
+             groupName.includes(query) || 
+             matchDate.includes(query);
+    });
+    
+    // If no results found, return original matches to keep display unchanged
+    return filtered.length > 0 ? filtered : matches;
+  };
+
+  // Search active state
+  const isSearchActive = searchQuery.trim().length > 0;
+  const allFilteredMatches = isSearchActive 
+    ? data.matches.filter(match => {
+        const team1 = data.teams.find(t => t.id === match.team1Id);
+        const team2 = data.teams.find(t => t.id === match.team2Id);
+        const group = data.groups.find(g => g.id === match.groupId);
+        
+        const team1Name = team1?.name.toLowerCase() || "";
+        const team2Name = team2?.name.toLowerCase() || "";
+        const groupName = group?.name.toLowerCase() || "";
+        const matchDate = match.date ? new Date(match.date).toLocaleDateString("it-IT") : "";
+        const query = searchQuery.toLowerCase();
+        
+        return team1Name.includes(query) || 
+               team2Name.includes(query) || 
+               groupName.includes(query) || 
+               matchDate.includes(query);
+      })
+    : [];
+
   // Group matches by group and then by giornata
   const matchesByGroup = data.groups.map(group => {
     const groupMatches = data.matches.filter(m => m.groupId === group.id);
+    const filteredMatches = filterMatches(groupMatches);
     
     // Group by giornata
-    const giornate = new Map<number, typeof groupMatches>();
-    groupMatches.forEach(match => {
+    const giornate = new Map<number, typeof filteredMatches>();
+    filteredMatches.forEach(match => {
       const giornata = match.giornata || 0;
       if (!giornate.has(giornata)) {
         giornate.set(giornata, []);
@@ -236,8 +285,9 @@ export const AdminMatches = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+        <div className="flex flex-wrap gap-2 flex-1">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="shadow-primary w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
@@ -320,13 +370,13 @@ export const AdminMatches = () => {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="shadow-primary w-full sm:w-auto">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Genera Partite
-            </Button>
-          </DialogTrigger>
+          <Dialog open={isGenerateDialogOpen} onOpenChange={setIsGenerateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="shadow-primary w-full sm:w-auto">
+                <Sparkles className="w-4 h-4 mr-2" />
+                Genera Partite
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Genera Partite Automaticamente</DialogTitle>
@@ -364,6 +414,44 @@ export const AdminMatches = () => {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
+
+        {/* Search functionality */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {isSearchOpen && (
+            <div className="relative animate-fade-in flex-1 sm:flex-initial">
+              <Input
+                type="text"
+                placeholder="Cerca team, girone o data..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full sm:w-64 pr-8 transition-all"
+                autoFocus
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              setIsSearchOpen(!isSearchOpen);
+              if (isSearchOpen) {
+                setSearchQuery("");
+              }
+            }}
+            className="hover-scale shrink-0"
+          >
+            <Search className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Edit Match Result Dialog */}
@@ -516,7 +604,81 @@ export const AdminMatches = () => {
         </DialogContent>
       </Dialog>
 
-      {matchesByGroup.length === 0 ? (
+      {/* Search results card */}
+      {isSearchActive && allFilteredMatches.length > 0 && (
+        <Card className="shadow-card">
+          <CardHeader className="bg-gradient-primary text-primary-foreground rounded-t-lg">
+            <CardTitle>Risultati ricerca</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              {allFilteredMatches.map((match) => {
+                const team1 = data.teams.find(t => t.id === match.team1Id);
+                const team2 = data.teams.find(t => t.id === match.team2Id);
+                const group = data.groups.find(g => g.id === match.groupId);
+                
+                return (
+                  <div
+                    key={match.id}
+                    className="p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {group?.name}{match.giornata ? ` - Giornata ${match.giornata}` : ""}
+                        </p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant={match.completed ? "default" : "secondary"}>
+                            {match.completed ? "Completata" : "Da giocare"}
+                          </Badge>
+                        </div>
+                        <p className="font-bold">
+                          {team1?.name} vs {team2?.name}
+                        </p>
+                        {match.date && (
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(match.date).toLocaleDateString("it-IT")}
+                            {match.time && ` - ${match.time}`}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditMatch(match.id)}
+                        >
+                          <Save className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteMatch(match.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {match.sets.length > 0 && (
+                      <div className="mt-2 flex gap-2">
+                        {match.sets.map((set, i) => (
+                          <Badge key={i} variant="outline">
+                            {set.team1Score}-{set.team2Score}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Original grouped view */}
+      {!isSearchActive && matchesByGroup.length === 0 ? (
         <Card className="shadow-card">
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground py-8">
@@ -524,7 +686,7 @@ export const AdminMatches = () => {
             </p>
           </CardContent>
         </Card>
-      ) : (
+      ) : !isSearchActive && (
         <div className="space-y-6">
           {matchesByGroup.map(({ group, giornate }) => (
             <Card key={group.id} className="shadow-card">
