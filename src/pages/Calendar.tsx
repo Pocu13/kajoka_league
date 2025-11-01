@@ -195,74 +195,71 @@ const Calendar = () => {
           </div>
           
           <div className="space-y-6">
-            {/* Mobile: Single card with all search results */}
+            {/* Single card with all search results - All devices */}
             {isSearchActive && allFilteredMatches.length > 0 && (
-              <div className="md:hidden">
-                <Card className="shadow-card overflow-hidden">
-                  <CardHeader className="bg-gradient-primary text-primary-foreground">
-                    <CardTitle>Risultati ricerca</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="grid gap-3">
-                      {allFilteredMatches.map((match) => {
-                        const team1 = data.teams.find(t => t.id === match.team1Id);
-                        const team2 = data.teams.find(t => t.id === match.team2Id);
-                        const group = data.groups.find(g => g.id === match.groupId);
-                        
-                        return (
-                          <div
-                            key={match.id}
-                            className="p-4 bg-muted/30 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
-                          >
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex-1">
-                                <p className="text-xs text-muted-foreground mb-1">
-                                  {group?.name} - Giornata {match.giornata}
+              <Card className="shadow-card overflow-hidden">
+                <CardHeader className="bg-gradient-primary text-primary-foreground">
+                  <CardTitle>Risultati ricerca</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="grid gap-3">
+                    {allFilteredMatches.map((match) => {
+                      const team1 = data.teams.find(t => t.id === match.team1Id);
+                      const team2 = data.teams.find(t => t.id === match.team2Id);
+                      const group = data.groups.find(g => g.id === match.groupId);
+                      
+                      return (
+                        <div
+                          key={match.id}
+                          className="p-4 bg-muted/30 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <p className="text-xs text-muted-foreground mb-1">
+                                {group?.name} - Giornata {match.giornata}
+                              </p>
+                              <p className="font-semibold text-sm mb-1">
+                                {team1?.name} vs {team2?.name}
+                              </p>
+                              {match.date && (
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(match.date).toLocaleDateString("it-IT")}
+                                  {match.time && ` - ${match.time}`}
                                 </p>
-                                <p className="font-semibold text-sm mb-1">
-                                  {team1?.name} vs {team2?.name}
+                              )}
+                              {!match.date && (
+                                <p className="text-xs text-muted-foreground italic">
+                                  Data da definire
                                 </p>
-                                {match.date && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {new Date(match.date).toLocaleDateString("it-IT")}
-                                    {match.time && ` - ${match.time}`}
-                                  </p>
-                                )}
-                                {!match.date && (
-                                  <p className="text-xs text-muted-foreground italic">
-                                    Data da definire
-                                  </p>
-                                )}
-                              </div>
-                              <Badge 
-                                variant={match.completed ? "default" : "secondary"}
-                                className="text-xs"
-                              >
-                                {match.completed ? "Giocata" : "Programmata"}
-                              </Badge>
+                              )}
                             </div>
-                            
-                            {match.sets.length > 0 && (
-                              <div className="flex gap-1 mt-2">
-                                {match.sets.map((set, i) => (
-                                  <Badge key={i} variant="outline" className="text-xs">
-                                    {set.team1Score}-{set.team2Score}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
+                            <Badge 
+                              variant={match.completed ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {match.completed ? "Giocata" : "Programmata"}
+                            </Badge>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                          
+                          {match.sets.length > 0 && (
+                            <div className="flex gap-1 mt-2">
+                              {match.sets.map((set, i) => (
+                                <Badge key={i} variant="outline" className="text-xs">
+                                  {set.team1Score}-{set.team2Score}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
-            {/* Desktop: Original grouped layout, or Mobile when not searching */}
-            <div className={isSearchActive ? "hidden md:block" : ""}>
-              {giornateView.map(({ group, giornate }) => (
+            {/* Original grouped layout when not searching */}
+            {!isSearchActive && giornateView.map(({ group, giornate }) => (
                 <Card key={group.id} className="shadow-card overflow-hidden">
                   <CardHeader className="bg-gradient-primary text-primary-foreground">
                     <CardTitle>{group.name}</CardTitle>
@@ -332,7 +329,6 @@ const Calendar = () => {
                   </CardContent>
                 </Card>
               ))}
-            </div>
           </div>
           
           <Separator className="my-8" />
