@@ -27,6 +27,9 @@ export const calculateStandings = (
         setsWon: 0,
         setsLost: 0,
         setDifference: 0,
+        gamesWon: 0,
+        gamesLost: 0,
+        gameDifference: 0,
         points: 0,
       };
     }
@@ -55,12 +58,36 @@ export const calculateStandings = (
         team1Points = team2Sets === 2 && team1Sets === 1 ? 1 : 0;
       }
       
+      // Calculate games won/lost for each set
+      let team1GamesTotal = 0;
+      let team2GamesTotal = 0;
+      
+      match.sets.forEach((set, index) => {
+        // Special rule: 3rd set (super tie-break) counts as 7-6 or 6-7
+        if (index === 2) {
+          if (set.team1Score > set.team2Score) {
+            team1GamesTotal += 7;
+            team2GamesTotal += 6;
+          } else {
+            team1GamesTotal += 6;
+            team2GamesTotal += 7;
+          }
+        } else {
+          team1GamesTotal += set.team1Score;
+          team2GamesTotal += set.team2Score;
+        }
+      });
+      
       // Update team 1
       standings[match.team1Id].played++;
       standings[match.team1Id].setsWon += team1Sets;
       standings[match.team1Id].setsLost += team2Sets;
       standings[match.team1Id].setDifference = 
         standings[match.team1Id].setsWon - standings[match.team1Id].setsLost;
+      standings[match.team1Id].gamesWon += team1GamesTotal;
+      standings[match.team1Id].gamesLost += team2GamesTotal;
+      standings[match.team1Id].gameDifference = 
+        standings[match.team1Id].gamesWon - standings[match.team1Id].gamesLost;
       standings[match.team1Id].points += team1Points;
       
       if (team1Won) {
@@ -75,6 +102,10 @@ export const calculateStandings = (
       standings[match.team2Id].setsLost += team1Sets;
       standings[match.team2Id].setDifference = 
         standings[match.team2Id].setsWon - standings[match.team2Id].setsLost;
+      standings[match.team2Id].gamesWon += team2GamesTotal;
+      standings[match.team2Id].gamesLost += team1GamesTotal;
+      standings[match.team2Id].gameDifference = 
+        standings[match.team2Id].gamesWon - standings[match.team2Id].gamesLost;
       standings[match.team2Id].points += team2Points;
       
       if (!team1Won) {
@@ -84,10 +115,11 @@ export const calculateStandings = (
       }
     });
 
-  // Sort by points, then by set difference
+  // Sort by points, then by set difference, then by game difference
   return Object.values(standings).sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
-    return b.setDifference - a.setDifference;
+    if (b.setDifference !== a.setDifference) return b.setDifference - a.setDifference;
+    return b.gameDifference - a.gameDifference;
   });
 };
 
