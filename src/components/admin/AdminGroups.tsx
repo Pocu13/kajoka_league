@@ -165,7 +165,7 @@ export const AdminGroups = () => {
             </p>
           ) : (
             <div className="space-y-3">
-              {data.groups.map((group) => {
+              {[...data.groups].sort((a, b) => a.name.localeCompare(b.name)).map((group) => {
                 const teams = data.teams.filter(t => group.teamIds.includes(t.id));
                 return (
                   <div
