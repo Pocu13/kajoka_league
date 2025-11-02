@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, Save, Sparkles, Search, X } from "lucide-react";
+import { Trash2, Plus, Save, Sparkles, Search, X, Calendar as CalendarIconLucide, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { MatchSet } from "@/types/tournament";
 import { validateSetScore, isMatchComplete } from "@/lib/tournamentLogic";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, isSameDay, startOfWeek, addDays, addWeeks, subWeeks } from "date-fns";
 import { it } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,6 +41,11 @@ export const AdminMatches = () => {
   const [selectedGroupForGeneration, setSelectedGroupForGeneration] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isPlannerDialogOpen, setIsPlannerDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -262,26 +267,34 @@ export const AdminMatches = () => {
       })
     : [];
 
-  // Group matches by group and then by giornata
-  const matchesByGroup = data.groups.map(group => {
-    const groupMatches = data.matches.filter(m => m.groupId === group.id);
-    const filteredMatches = filterMatches(groupMatches);
-    
-    // Group by giornata
-    const giornate = new Map<number, typeof filteredMatches>();
-    filteredMatches.forEach(match => {
-      const giornata = match.giornata || 0;
-      if (!giornate.has(giornata)) {
-        giornate.set(giornata, []);
-      }
-      giornate.get(giornata)!.push(match);
-    });
-    
-    return {
-      group,
-      giornate: Array.from(giornate.entries()).sort((a, b) => a[0] - b[0])
-    };
-  }).filter(g => g.giornate.length > 0);
+  // Group matches by group and then by giornata (sorted alphabetically)
+  const matchesByGroup = data.groups
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(group => {
+      const groupMatches = data.matches.filter(m => m.groupId === group.id);
+      const filteredMatches = filterMatches(groupMatches);
+      
+      // Group by giornata
+      const giornate = new Map<number, typeof filteredMatches>();
+      filteredMatches.forEach(match => {
+        const giornata = match.giornata || 0;
+        if (!giornate.has(giornata)) {
+          giornate.set(giornata, []);
+        }
+        giornate.get(giornata)!.push(match);
+      });
+      
+      return {
+        group,
+        giornate: Array.from(giornate.entries()).sort((a, b) => a[0] - b[0])
+      };
+    }).filter(g => g.giornate.length > 0);
+
+  // Weekly calendar functionality
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+  const matchesForSelectedDate = data.matches.filter(match => 
+    match.date && isSameDay(new Date(match.date), selectedDate)
+  );
 
   return (
     <div className="space-y-6">
@@ -411,6 +424,193 @@ export const AdminMatches = () => {
                 <Sparkles className="w-4 h-4 mr-2" />
                 Genera
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+          <Dialog open={isPlannerDialogOpen} onOpenChange={setIsPlannerDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="shadow-primary w-full sm:w-auto">
+                <CalendarIconLucide className="w-4 h-4 mr-2" />
+                Planner
+              </Button>
+            </DialogTrigger>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Calendario Settimanale</DialogTitle>
+              <DialogDescription>
+                Seleziona un giorno per vedere le partite con data e ora definite
+              </DialogDescription>
+            </DialogHeader>
+            <div className="pt-4">
+              <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6">
+                {/* Weekly Calendar View */}
+                <Card className="shadow-card h-fit">
+                  <CardHeader className="bg-gradient-primary text-primary-foreground">
+                    <div className="flex items-center justify-between">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setCurrentWeekStart(subWeeks(currentWeekStart, 1))}
+                        className="hover:bg-primary-foreground/20"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </Button>
+                      <CardTitle className="text-lg">
+                        {format(currentWeekStart, "MMMM yyyy", { locale: it })}
+                      </CardTitle>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
+                        className="hover:bg-primary-foreground/20"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      {weekDays.map((day) => {
+                        const isSelected = isSameDay(day, selectedDate);
+                        const isToday = isSameDay(day, new Date());
+                        const dayMatches = data.matches.filter(m => m.date && isSameDay(new Date(m.date), day));
+                        
+                        return (
+                          <button
+                            key={day.toISOString()}
+                            onClick={() => setSelectedDate(day)}
+                            className={`w-full p-4 rounded-lg text-left transition-all duration-200 ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground shadow-md scale-[1.02]"
+                                : "bg-muted/50 hover:bg-muted"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className={`text-xs font-medium uppercase ${
+                                  isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
+                                }`}>
+                                  {format(day, "EEEE", { locale: it })}
+                                </p>
+                                <p className="text-2xl font-bold mt-1">
+                                  {format(day, "d")}
+                                </p>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                {isToday && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Oggi
+                                  </Badge>
+                                )}
+                                {dayMatches.length > 0 && (
+                                  <Badge variant={isSelected ? "secondary" : "default"} className="text-xs">
+                                    {dayMatches.length} {dayMatches.length === 1 ? "partita" : "partite"}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Matches List */}
+                <div>
+                  <div className="mb-4">
+                    <h2 className="text-2xl font-bold">
+                      {format(selectedDate, "EEEE d MMMM yyyy", { locale: it })}
+                    </h2>
+                  </div>
+
+                  {matchesForSelectedDate.length === 0 ? (
+                    <Card className="shadow-card animate-scale-in">
+                      <CardContent className="p-12 text-center">
+                        <CalendarIconLucide className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-lg text-muted-foreground">
+                          Nessuna partita programmata per questa data.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4">
+                      {matchesForSelectedDate.map((match) => {
+                        const group = data.groups.find(g => g.id === match.groupId);
+                        const team1 = data.teams.find(t => t.id === match.team1Id);
+                        const team2 = data.teams.find(t => t.id === match.team2Id);
+
+                        if (!team1 || !team2) return null;
+
+                        const team1Sets = match.sets.filter(s => s.team1Score > s.team2Score).length;
+                        const team2Sets = match.sets.filter(s => s.team2Score > s.team1Score).length;
+
+                        return (
+                          <Card
+                            key={match.id}
+                            className="shadow-card hover:shadow-card-hover transition-all duration-300"
+                          >
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                                  {group?.name || "Gruppo sconosciuto"}
+                                </CardTitle>
+                                <Badge variant={match.completed ? "default" : "secondary"}>
+                                  {match.completed ? "Completata" : "In programma"}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              {match.time && (
+                                <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+                                  <Clock className="w-4 h-4" />
+                                  <span>{match.time}</span>
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex-1 text-right">
+                                  <p className="font-bold text-lg">{team1.name}</p>
+                                </div>
+
+                                <div className="flex items-center gap-3 px-6 py-3 bg-muted rounded-lg">
+                                  {match.completed ? (
+                                    <>
+                                      <span className="text-2xl font-bold text-primary">{team1Sets}</span>
+                                      <span className="text-muted-foreground">-</span>
+                                      <span className="text-2xl font-bold text-primary">{team2Sets}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-muted-foreground font-semibold">VS</span>
+                                  )}
+                                </div>
+
+                                <div className="flex-1">
+                                  <p className="font-bold text-lg">{team2.name}</p>
+                                </div>
+                              </div>
+
+                              {match.completed && match.sets.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-border">
+                                  <p className="text-xs text-muted-foreground mb-2">Dettaglio set:</p>
+                                  <div className="flex gap-2">
+                                    {match.sets.map((set, i) => (
+                                      <Badge key={i} variant="outline" className="text-xs">
+                                        {set.team1Score}-{set.team2Score}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
