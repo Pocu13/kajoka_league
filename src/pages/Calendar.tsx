@@ -259,7 +259,7 @@ const Calendar = () => {
             )}
 
             {/* Original grouped layout when not searching */}
-            {!isSearchActive && giornateView.map(({ group, giornate }) => (
+            {!isSearchActive && [...giornateView].sort((a, b) => a.group.name.localeCompare(b.group.name)).map(({ group, giornate }) => (
                 <Card key={group.id} className="shadow-card overflow-hidden">
                   <CardHeader className="bg-gradient-primary text-primary-foreground">
                     <CardTitle>{group.name}</CardTitle>
