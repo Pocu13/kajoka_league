@@ -41,6 +41,9 @@ export interface Standing {
   setsWon: number;
   setsLost: number;
   setDifference: number;
+  gamesWon: number;
+  gamesLost: number;
+  gameDifference: number;
   points: number;
 }
 
