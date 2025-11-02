@@ -41,7 +41,7 @@ const Standings = () => {
           </Card>
         ) : (
           <div className="grid gap-6">
-            {data.groups.map((group, idx) => {
+            {[...data.groups].sort((a, b) => a.name.localeCompare(b.name)).map((group, idx) => {
               const standings = calculateStandings(data.matches, data.teams, group.id);
 
               return (
@@ -79,7 +79,8 @@ const Standings = () => {
                                 <TableHead className="text-center font-bold">PG</TableHead>
                                 <TableHead className="text-center font-bold">V</TableHead>
                                 <TableHead className="text-center font-bold">P</TableHead>
-                                <TableHead className="text-center font-bold">Diff</TableHead>
+                                <TableHead className="text-center font-bold">Diff Set</TableHead>
+                                <TableHead className="text-center font-bold">Diff Game</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -133,6 +134,15 @@ const Standings = () => {
                                       {standing.setDifference}
                                     </Badge>
                                   </TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge
+                                      variant={standing.gameDifference >= 0 ? "default" : "secondary"}
+                                      className="font-semibold"
+                                    >
+                                      {standing.gameDifference >= 0 ? "+" : ""}
+                                      {standing.gameDifference}
+                                    </Badge>
+                                  </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -163,13 +173,22 @@ const Standings = () => {
                                     />
                                   )}
                                 </div>
-                                <Badge
-                                  variant={standing.setDifference >= 0 ? "default" : "secondary"}
-                                  className="font-semibold"
-                                >
-                                  Diff: {standing.setDifference >= 0 ? "+" : ""}
-                                  {standing.setDifference}
-                                </Badge>
+                                <div className="flex gap-2">
+                                  <Badge
+                                    variant={standing.setDifference >= 0 ? "default" : "secondary"}
+                                    className="font-semibold text-xs"
+                                  >
+                                    Set: {standing.setDifference >= 0 ? "+" : ""}
+                                    {standing.setDifference}
+                                  </Badge>
+                                  <Badge
+                                    variant={standing.gameDifference >= 0 ? "default" : "secondary"}
+                                    className="font-semibold text-xs"
+                                  >
+                                    Game: {standing.gameDifference >= 0 ? "+" : ""}
+                                    {standing.gameDifference}
+                                  </Badge>
+                                </div>
                               </div>
                               
                               <h3 className="font-bold text-lg mb-3">{standing.teamName}</h3>
