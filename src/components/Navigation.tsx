@@ -18,13 +18,13 @@ export const Navigation = () => {
 
   return (
     <nav className="bg-card shadow-card sticky top-0 z-50 border-b border-border">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2 hover-scale">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Trophy className="w-6 h-6 text-primary" />
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="flex items-center justify-between h-14 sm:h-16">
+          <Link to="/" className="flex items-center gap-1.5 sm:gap-2 hover-scale min-w-0">
+            <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg shrink-0">
+              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent whitespace-nowrap">
+            <span className="text-base sm:text-lg md:text-xl font-bold bg-gradient-primary bg-clip-text text-transparent whitespace-nowrap truncate">
               Kajoka League 3.0
             </span>
           </Link>
