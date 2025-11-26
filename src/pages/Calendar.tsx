@@ -79,12 +79,12 @@ const Calendar = () => {
     : [];
 
   return (
-    <div className="container mx-auto py-8 px-4 space-y-8 animate-fade-in">
+    <div className="container mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-6 sm:space-y-8 animate-fade-in max-w-7xl">
       <div>
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent px-2">
           Calendario Partite
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm sm:text-base px-2">
           Consulta le partite programmate e i risultati
         </p>
       </div>
@@ -95,8 +95,8 @@ const Calendar = () => {
           {/* Desktop layout */}
           <div className="hidden md:flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-1">Giornate</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="text-xl sm:text-2xl font-bold mb-1">Giornate</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Tutte le partite organizzate per giornata
               </p>
             </div>
@@ -138,10 +138,10 @@ const Calendar = () => {
           </div>
 
           {/* Mobile layout */}
-          <div className="md:hidden space-y-4">
+          <div className="md:hidden space-y-3 sm:space-y-4">
             <div>
-              <h2 className="text-2xl font-bold mb-1">Giornate</h2>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="text-xl sm:text-2xl font-bold mb-1">Giornate</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Tutte le partite organizzate per giornata
               </p>
             </div>
@@ -199,14 +199,14 @@ const Calendar = () => {
                       return (
                         <div
                           key={match.id}
-                          className="p-4 bg-muted/30 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
+                          className="p-3 sm:p-4 bg-muted/30 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
                         >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1">
-                              <p className="text-xs text-muted-foreground mb-1">
+                          <div className="flex items-start justify-between mb-2 gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-muted-foreground mb-1 truncate">
                                 {group?.name} - Giornata {match.giornata}
                               </p>
-                              <p className="font-semibold text-sm mb-1">
+                              <p className="font-semibold text-xs sm:text-sm mb-1">
                                 {team1?.name} vs {team2?.name}
                               </p>
                               {match.date && (
@@ -223,9 +223,9 @@ const Calendar = () => {
                             </div>
                             <Badge 
                               variant={match.completed ? "default" : "secondary"}
-                              className="text-xs"
+                              className="text-xs shrink-0"
                             >
-                              {match.completed ? "Giocata" : "Programmata"}
+                              {match.completed ? "Giocata" : "Prog."}
                             </Badge>
                           </div>
                           
@@ -263,7 +263,7 @@ const Calendar = () => {
                             <Separator className="flex-1" />
                           </div>
                           
-                          <div className="grid md:grid-cols-2 gap-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {matches.map((match) => {
                               const team1 = data.teams.find(t => t.id === match.team1Id);
                               const team2 = data.teams.find(t => t.id === match.team2Id);
@@ -271,11 +271,11 @@ const Calendar = () => {
                               return (
                                 <div
                                   key={match.id}
-                                  className="p-4 bg-muted/30 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
+                                  className="p-3 sm:p-4 bg-muted/30 rounded-lg border border-border/50 hover:border-primary/30 transition-colors"
                                 >
-                                  <div className="flex items-start justify-between mb-2">
-                                    <div className="flex-1">
-                                      <p className="font-semibold text-sm mb-1">
+                                  <div className="flex items-start justify-between mb-2 gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-semibold text-xs sm:text-sm mb-1">
                                         {team1?.name} vs {team2?.name}
                                       </p>
                                       {match.date && (
@@ -292,9 +292,9 @@ const Calendar = () => {
                                     </div>
                                     <Badge 
                                       variant={match.completed ? "default" : "secondary"}
-                                      className="text-xs"
+                                      className="text-xs shrink-0"
                                     >
-                                      {match.completed ? "Giocata" : "Programmata"}
+                                      {match.completed ? "Giocata" : "Prog."}
                                     </Badge>
                                   </div>
                                   
