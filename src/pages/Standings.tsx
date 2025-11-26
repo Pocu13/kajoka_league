@@ -67,166 +67,85 @@ const Standings = () => {
                         Nessun team in questo girone
                       </p>
                     ) : (
-                      <>
-                        {/* Desktop Table View */}
-                        <div className="hidden md:block rounded-lg border border-border overflow-hidden">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-muted/50">
-                                <TableHead className="w-12 text-center font-bold">#</TableHead>
-                                <TableHead className="font-bold">Team</TableHead>
-                                <TableHead className="text-center font-bold">PT</TableHead>
-                                <TableHead className="text-center font-bold">PG</TableHead>
-                                <TableHead className="text-center font-bold">V</TableHead>
-                                <TableHead className="text-center font-bold">P</TableHead>
-                                <TableHead className="text-center font-bold">Diff Set</TableHead>
-                                <TableHead className="text-center font-bold">Diff Game</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {standings.map((standing, position) => (
-                                <TableRow
-                                  key={standing.teamId}
-                                  className="hover:bg-muted/30 transition-colors"
-                                >
-                                  <TableCell className="text-center font-bold">
-                                    <div className="flex items-center justify-center gap-1">
-                                      {position < 3 && (
-                                        <Trophy
-                                          className={`w-4 h-4 ${
-                                            position === 0
-                                              ? "text-yellow-500"
-                                              : position === 1
-                                              ? "text-gray-400"
-                                              : "text-orange-600"
-                                          }`}
-                                        />
-                                      )}
-                                      {position + 1}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="font-semibold">
-                                    {standing.teamName}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <div className="flex items-center justify-center gap-1">
-                                      <TrendingUp className="w-4 h-4 text-primary" />
-                                      <span className="font-bold text-primary text-lg">
-                                        {standing.points}
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-center font-medium">
-                                    {standing.played}
-                                  </TableCell>
-                                  <TableCell className="text-center font-medium text-green-600">
-                                    {standing.wins}
-                                  </TableCell>
-                                  <TableCell className="text-center font-medium text-red-600">
-                                    {standing.losses}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <Badge
-                                      variant={standing.setDifference >= 0 ? "default" : "secondary"}
-                                      className="font-semibold"
-                                    >
-                                      {standing.setDifference >= 0 ? "+" : ""}
-                                      {standing.setDifference}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    <Badge
-                                      variant={standing.gameDifference >= 0 ? "default" : "secondary"}
-                                      className="font-semibold"
-                                    >
-                                      {standing.gameDifference >= 0 ? "+" : ""}
-                                      {standing.gameDifference}
-                                    </Badge>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-
-                        {/* Mobile Card View */}
-                        <div className="md:hidden space-y-3">
-                          {standings.map((standing, position) => (
-                            <div
-                              key={standing.teamId}
-                              className="p-4 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors"
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 font-bold text-primary">
-                                    {position + 1}
+                      <div className="rounded-lg border border-border overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/50">
+                              <TableHead className="w-8 md:w-12 text-center font-bold text-xs md:text-sm px-1 md:px-4">#</TableHead>
+                              <TableHead className="font-bold text-xs md:text-sm px-2 md:px-4">Team</TableHead>
+                              <TableHead className="text-center font-bold text-xs md:text-sm px-1 md:px-4">PT</TableHead>
+                              <TableHead className="text-center font-bold text-xs md:text-sm px-1 md:px-4">PG</TableHead>
+                              <TableHead className="text-center font-bold text-xs md:text-sm px-1 md:px-4">V</TableHead>
+                              <TableHead className="text-center font-bold text-xs md:text-sm px-1 md:px-4">P</TableHead>
+                              <TableHead className="text-center font-bold text-xs md:text-sm px-1 md:px-4">D.S</TableHead>
+                              <TableHead className="text-center font-bold text-xs md:text-sm px-1 md:px-4">D.G</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {standings.map((standing, position) => (
+                              <TableRow
+                                key={standing.teamId}
+                                className="hover:bg-muted/30 transition-colors"
+                              >
+                                <TableCell className="text-center font-bold px-1 md:px-4 py-2 md:py-4">
+                                  <div className="flex items-center justify-center gap-0.5 md:gap-1">
+                                    {position < 3 && (
+                                      <Trophy
+                                        className={`w-3 h-3 md:w-4 md:h-4 ${
+                                          position === 0
+                                            ? "text-yellow-500"
+                                            : position === 1
+                                            ? "text-gray-400"
+                                            : "text-orange-600"
+                                        }`}
+                                      />
+                                    )}
+                                    <span className="text-xs md:text-base">{position + 1}</span>
                                   </div>
-                                  {position < 3 && (
-                                    <Trophy
-                                      className={`w-5 h-5 ${
-                                        position === 0
-                                          ? "text-yellow-500"
-                                          : position === 1
-                                          ? "text-gray-400"
-                                          : "text-orange-600"
-                                      }`}
-                                    />
-                                  )}
-                                </div>
-                                <div className="flex gap-2">
+                                </TableCell>
+                                <TableCell className="font-semibold px-2 md:px-4 py-2 md:py-4 text-xs md:text-base">
+                                  {standing.teamName}
+                                </TableCell>
+                                <TableCell className="text-center px-1 md:px-4 py-2 md:py-4">
+                                  <div className="flex items-center justify-center gap-0.5 md:gap-1">
+                                    <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-primary" />
+                                    <span className="font-bold text-primary text-sm md:text-lg">
+                                      {standing.points}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center font-medium px-1 md:px-4 py-2 md:py-4 text-xs md:text-base">
+                                  {standing.played}
+                                </TableCell>
+                                <TableCell className="text-center font-medium text-green-600 px-1 md:px-4 py-2 md:py-4 text-xs md:text-base">
+                                  {standing.wins}
+                                </TableCell>
+                                <TableCell className="text-center font-medium text-red-600 px-1 md:px-4 py-2 md:py-4 text-xs md:text-base">
+                                  {standing.losses}
+                                </TableCell>
+                                <TableCell className="text-center px-1 md:px-4 py-2 md:py-4">
                                   <Badge
                                     variant={standing.setDifference >= 0 ? "default" : "secondary"}
                                     className="font-semibold text-xs"
                                   >
-                                    Set: {standing.setDifference >= 0 ? "+" : ""}
+                                    {standing.setDifference >= 0 ? "+" : ""}
                                     {standing.setDifference}
                                   </Badge>
+                                </TableCell>
+                                <TableCell className="text-center px-1 md:px-4 py-2 md:py-4">
                                   <Badge
                                     variant={standing.gameDifference >= 0 ? "default" : "secondary"}
                                     className="font-semibold text-xs"
                                   >
-                                    Game: {standing.gameDifference >= 0 ? "+" : ""}
+                                    {standing.gameDifference >= 0 ? "+" : ""}
                                     {standing.gameDifference}
                                   </Badge>
-                                </div>
-                              </div>
-                              
-                              <h3 className="font-bold text-lg mb-3">{standing.teamName}</h3>
-                              
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col items-center p-2 rounded bg-primary/10">
-                                  <span className="text-xs text-muted-foreground mb-1">Punti</span>
-                                  <div className="flex items-center gap-1">
-                                    <TrendingUp className="w-4 h-4 text-primary" />
-                                    <span className="font-bold text-primary text-xl">
-                                      {standing.points}
-                                    </span>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex flex-col items-center p-2 rounded bg-muted/50">
-                                  <span className="text-xs text-muted-foreground mb-1">Giocate</span>
-                                  <span className="font-bold text-lg">{standing.played}</span>
-                                </div>
-                                
-                                <div className="flex flex-col items-center p-2 rounded bg-green-500/10">
-                                  <span className="text-xs text-muted-foreground mb-1">Vinte</span>
-                                  <span className="font-bold text-lg text-green-600">
-                                    {standing.wins}
-                                  </span>
-                                </div>
-                                
-                                <div className="flex flex-col items-center p-2 rounded bg-red-500/10">
-                                  <span className="text-xs text-muted-foreground mb-1">Perse</span>
-                                  <span className="font-bold text-lg text-red-600">
-                                    {standing.losses}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
